@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#fbf7f1" />
-    <meta name="description" content="スマホの動画をつないで、1本の思い出動画に。動画は端末の外に送られません。" />
+    <meta name="description" content="スマホの動画や写真をつないで、1本の思い出動画に。動画や写真は端末の外に送られません。" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icon-192.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
@@ -15,19 +15,31 @@
   <body>
     <header class="top">
       <h1>かんたんVlog</h1>
-      <p>スマホの動画をつないで、1本の思い出動画に。動画は端末の外に送られません。</p>
+      <p>スマホの動画や写真をつないで、1本の思い出動画に。動画や写真は端末の外に送られません。</p>
     </header>
 
     <main>
       <div id="support" class="notice warn" hidden></div>
 
       <section class="step">
-        <h2><span class="num">1</span>動画を選ぶ</h2>
+        <h2><span class="num">1</span>動画・写真を選ぶ</h2>
         <label class="btn primary big">
-          ＋ 動画を選ぶ
-          <input id="pick" type="file" accept="video/*" multiple hidden />
+          ＋ 動画・写真を選ぶ
+          <input id="pick" type="file" accept="video/*,image/*" multiple hidden />
         </label>
-        <p class="hint">短い動画を数本（まずは5本くらいまで）。あとから追加もできます。</p>
+        <p class="hint">短い動画や写真を数個。写真は1枚3秒でうつります。あとから追加もできます。</p>
+        <details class="extras">
+          <summary>iPhoneで選んだあと、ぐるぐるが止まって進まないとき</summary>
+          <p class="hint">
+            選んだ動画の上のぐるぐるは、iPhoneが動画をiCloudから取り出したり、変換したりしている印です（このアプリの中ではなくiPhone側の処理です）。長い動画ほど時間がかかります。
+          </p>
+          <ol class="hint">
+            <li>Wi-Fiにつないでから選ぶ</li>
+            <li>先に「写真」アプリでその動画を一度再生して、iPhoneに読み込ませておく</li>
+            <li>一度に選ぶのは1〜2本ずつにする（あとから追加できます）</li>
+            <li>長い動画は「写真」アプリの「編集」で短くしてから選ぶ</li>
+          </ol>
+        </details>
         <div id="loading" class="hint" hidden></div>
         <ul id="errors" class="errors"></ul>
       </section>
@@ -79,6 +91,7 @@
         <div id="previewBox" class="preview" hidden>
           <div class="stage">
             <video id="previewVideo" playsinline></video>
+            <img id="previewPhoto" alt="" hidden />
             <div id="previewTitle" class="title-overlay"></div>
           </div>
           <p class="hint">プレビューは目安です。音楽の音量はスマホによって反映されないことがあります。</p>

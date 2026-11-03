@@ -7,31 +7,103 @@ import {
   type InputVideoTrack,
 } from 'mediabunny';
 
-export type Clip = {
+type ClipBase = {
   id: string;
   file: File;
   name: string;
-  input: Input;
-  video: InputVideoTrack;
-  audio: InputAudioTrack | null;
-  /** Timestamp of the first video frame. All clip times are relative to it. */
-  base: number;
   duration: number;
   width: number;
   height: number;
-  /** Trim range in seconds, relative to `base`. */
+  /** Trim range in seconds (for photos: 0..shown seconds). */
   start: number;
   end: number;
   thumbUrl: string;
   objectUrl: string;
 };
 
+export type VideoClip = ClipBase & {
+  kind: 'video';
+  input: Input;
+  video: InputVideoTrack;
+  audio: InputAudioTrack | null;
+  /** Timestamp of the first video frame. All clip times are relative to it. */
+  base: number;
+};
+
+/** A still photo shown for a few seconds. `image` is already shrunk to at most PHOTO_MAX_SIDE px. */
+export type PhotoClip = ClipBase & {
+  kind: 'photo';
+  image: HTMLCanvasElement;
+  audio: null;
+};
+
+export type Clip = VideoClip | PhotoClip;
+
+export const PHOTO_SECONDS = 3;
+export const PHOTO_SECONDS_CHOICES = [2, 3, 4, 5, 7, 10];
+const PHOTO_MAX_SIDE = 1280;
+
 /** A message meant for the person using the app (Japanese, no jargon). */
 export class UserFacingError extends Error {}
 
 let nextId = 1;
 
-export async function loadClip(file: File): Promise<Clip> {
+export function isPhotoFile(file: File) {
+  return file.type.startsWith('image/') || /\.(jpe?g|png|heic|heif|webp|gif)$/i.test(file.name);
+}
+
+/** Loads a picked file as a video clip or a photo. */
+export function loadMedia(file: File): Promise<Clip> {
+  return isPhotoFile(file) ? loadPhoto(file) : loadClip(file);
+}
+
+async function loadPhoto(file: File): Promise<PhotoClip> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = objectUrl;
+    try {
+      await img.decode();
+    } catch {
+      throw new UserFacingError(`「${file.name}」は読み込めない写真です。JPEG・PNG・HEICの写真を選んでください。`);
+    }
+    // Shrink right away so ten 12MP photos don't fill the phone's memory.
+    const k = Math.min(1, PHOTO_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const image = document.createElement('canvas');
+    image.width = Math.max(2, Math.round(img.naturalWidth * k));
+    image.height = Math.max(2, Math.round(img.naturalHeight * k));
+    image.getContext('2d')!.drawImage(img, 0, 0, image.width, image.height);
+    const tk = Math.min(1, 320 / image.width, 180 / image.height);
+    const thumb = Object.assign(document.createElement('canvas'), {
+      width: Math.max(2, Math.round(image.width * tk)),
+      height: Math.max(2, Math.round(image.height * tk)),
+    });
+    thumb.getContext('2d')!.drawImage(image, 0, 0, thumb.width, thumb.height);
+    const blob = await new Promise<Blob | null>((r) => thumb.toBlob(r, 'image/jpeg', 0.7));
+    return {
+      kind: 'photo',
+      id: `clip${nextId++}`,
+      file,
+      name: file.name,
+      image,
+      audio: null,
+      duration: PHOTO_SECONDS,
+      width: image.width,
+      height: image.height,
+      start: 0,
+      end: PHOTO_SECONDS,
+      thumbUrl: blob ? URL.createObjectURL(blob) : '',
+      objectUrl,
+    };
+  } catch (err) {
+    URL.revokeObjectURL(objectUrl);
+    if (err instanceof UserFacingError) throw err;
+    console.error(err);
+    throw new UserFacingError(`「${file.name}」を読み込めませんでした。`);
+  }
+}
+
+export async function loadClip(file: File): Promise<VideoClip> {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     if (!(await input.canRead())) {
@@ -63,6 +135,7 @@ export async function loadClip(file: File): Promise<Clip> {
     }
     const thumbUrl = await makeThumb(video, base + Math.min(1, duration / 2));
     return {
+      kind: 'video',
       id: `clip${nextId++}`,
       file,
       name: file.name,
@@ -91,7 +164,7 @@ export async function loadClip(file: File): Promise<Clip> {
 export function disposeClip(clip: Clip) {
   URL.revokeObjectURL(clip.thumbUrl);
   URL.revokeObjectURL(clip.objectUrl);
-  clip.input.dispose();
+  if (clip.kind === 'video') clip.input.dispose();
 }
 
 async function makeThumb(track: InputVideoTrack, t: number): Promise<string> {

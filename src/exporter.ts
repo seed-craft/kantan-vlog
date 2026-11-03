@@ -162,6 +162,16 @@ export async function exportVlog(opts: ExportOptions): Promise<ExportResult> {
     };
 
     let frameIndex = 0;
+    const emitFrame = async (i: number) => {
+      const t = frameIndex / FPS;
+      if (opts.title.trim() && t < TITLE_SECONDS) drawTitle(ctx, opts.title.trim(), t, opts.titleFont);
+      await feedAudioUntil(t + 1);
+      await videoSource.add(t, 1 / FPS);
+      frameIndex++;
+      if (frameIndex % 5 === 0) {
+        onProgress(0.1 + 0.88 * (frameIndex / totalFrames), `動画を作っています（${i + 1}/${clips.length}）`);
+      }
+    };
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i];
       // Fit the whole picture inside the frame (never crop). Empty space gets a blurred copy.
@@ -169,12 +179,29 @@ export async function exportVlog(opts: ExportOptions): Promise<ExportResult> {
       const fw = Math.min(W, 2 * Math.round((clip.width * scale) / 2));
       const fh = Math.min(H, 2 * Math.round((clip.height * scale) / 2));
       const fills = fw >= W - 4 && fh >= H - 4;
+      if (clip.kind === 'photo') {
+        // A photo is the same picture every frame: compose it once, then repeat it.
+        const still = Object.assign(document.createElement('canvas'), { width: W, height: H });
+        const sctx = still.getContext('2d', { alpha: false })!;
+        if (fills) {
+          sctx.drawImage(clip.image, 0, 0, W, H);
+        } else {
+          backdrop.draw(sctx, clip.image);
+          sctx.imageSmoothingQuality = 'high';
+          sctx.drawImage(clip.image, (W - fw) / 2, (H - fh) / 2, fw, fh);
+        }
+        for (let k = 0; k < frames[i]; k++) {
+          check();
+          ctx.drawImage(still, 0, 0);
+          await emitFrame(i);
+        }
+        continue;
+      }
       const sink = new CanvasSink(clip.video, { width: fills ? W : fw, height: fills ? H : fh, fit: 'cover', poolSize: 2 });
       const from = clip.base + clip.start;
       const times = Array.from({ length: frames[i] }, (_, k) => from + k / FPS);
       for await (const wrapped of sink.canvasesAtTimestamps(times)) {
         check();
-        const t = frameIndex / FPS;
         if (wrapped) {
           if (fills) {
             ctx.drawImage(wrapped.canvas, 0, 0, W, H);
@@ -183,13 +210,7 @@ export async function exportVlog(opts: ExportOptions): Promise<ExportResult> {
             ctx.drawImage(wrapped.canvas, (W - fw) / 2, (H - fh) / 2, fw, fh);
           }
         } // else: keep the previous frame on screen
-        if (opts.title.trim() && t < TITLE_SECONDS) drawTitle(ctx, opts.title.trim(), t, opts.titleFont);
-        await feedAudioUntil(t + 1);
-        await videoSource.add(t, 1 / FPS);
-        frameIndex++;
-        if (frameIndex % 5 === 0) {
-          onProgress(0.1 + 0.88 * (frameIndex / totalFrames), `動画を作っています（${i + 1}/${clips.length}本目）`);
-        }
+        await emitFrame(i);
       }
     }
     await feedAudioUntil(Infinity);
@@ -289,7 +310,7 @@ async function renderAudio(
   for (let i = 0; i < opts.clips.length; i++) {
     const clip = opts.clips[i];
     const len = frames[i] / FPS;
-    if (clip.audio && opts.videoVolume > 0) {
+    if (clip.kind === 'video' && clip.audio && opts.videoVolume > 0) {
       const sr = clip.audio.sampleRate;
       const channels = Math.min(2, Math.max(1, clip.audio.numberOfChannels));
       const buf = ctx.createBuffer(channels, Math.max(1, Math.ceil(len * sr)), sr);

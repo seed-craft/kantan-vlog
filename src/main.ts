@@ -1,5 +1,14 @@
 import './style.css';
-import { UserFacingError, clipLength, disposeClip, formatTime, loadClip, type Clip } from './media';
+import {
+  PHOTO_SECONDS_CHOICES,
+  UserFacingError,
+  clipLength,
+  disposeClip,
+  formatTime,
+  loadMedia,
+  type Clip,
+  type VideoClip,
+} from './media';
 import {
   TITLE_FADE,
   TITLE_SECONDS,
@@ -42,12 +51,12 @@ pick.addEventListener('change', async () => {
   loading.hidden = false;
   for (const [i, file] of files.entries()) {
     if (state.clips.length >= MAX_CLIPS) {
-      addError(`一度に使えるのは${MAX_CLIPS}本までです。残りは追加しませんでした。`);
+      addError(`一度に使えるのは動画・写真あわせて${MAX_CLIPS}個までです。残りは追加しませんでした。`);
       break;
     }
     loading.textContent = `読み込み中…（${i + 1}/${files.length}）`;
     try {
-      state.clips.push(await loadClip(file));
+      state.clips.push(await loadMedia(file));
       render();
     } catch (err) {
       addError(err instanceof UserFacingError ? err.message : `「${file.name}」を読み込めませんでした。`);
@@ -84,21 +93,25 @@ function render() {
     meta.className = 'meta';
     const name = document.createElement('div');
     name.className = 'name';
-    name.textContent = `${i + 1}本目`;
+    name.textContent = `${i + 1}．${c.kind === 'photo' ? '写真' : '動画'}`;
     const range = document.createElement('div');
     range.className = 'range';
-    const trimmed = c.start > 0.05 || c.end < c.duration - 0.05;
-    range.textContent = `${formatTime(c.start)}〜${formatTime(c.end)}（${clipLength(c).toFixed(1)}秒）${trimmed ? '・切った' : ''}`;
+    if (c.kind === 'photo') {
+      range.textContent = `${clipLength(c)}秒間うつします`;
+    } else {
+      const trimmed = c.start > 0.05 || c.end < c.duration - 0.05;
+      range.textContent = `${formatTime(c.start)}〜${formatTime(c.end)}（${clipLength(c).toFixed(1)}秒）${trimmed ? '・切った' : ''}`;
+    }
     const file = document.createElement('div');
     file.className = 'range';
-    file.textContent = c.audio ? c.name : `${c.name}（音なし）`;
+    file.textContent = c.kind === 'photo' || c.audio ? c.name : `${c.name}（音なし）`;
     meta.append(name, range, file);
     const actions = document.createElement('div');
     actions.className = 'actions';
     actions.append(
       actionBtn('↑', 'up', '前へ', i === 0),
       actionBtn('↓', 'down', '後ろへ', i === state.clips.length - 1),
-      actionBtn('✂ 切る', 'trim', '切る'),
+      c.kind === 'photo' ? secondsSelect(clipLength(c)) : actionBtn('✂ 切る', 'trim', '切る'),
       actionBtn('消す', 'remove', '消す'),
     );
     li.append(img, meta, actions);
@@ -126,6 +139,32 @@ function actionBtn(label: string, action: string, aria: string, disabled = false
   return b;
 }
 
+function secondsSelect(current: number) {
+  const sel = document.createElement('select');
+  sel.className = 'btn small';
+  sel.dataset.action = 'seconds';
+  sel.setAttribute('aria-label', '写真を見せる秒数');
+  for (const n of PHOTO_SECONDS_CHOICES) {
+    const o = document.createElement('option');
+    o.value = String(n);
+    o.textContent = `${n}秒`;
+    o.selected = n === current;
+    sel.append(o);
+  }
+  return sel;
+}
+
+$('clips').addEventListener('change', (e) => {
+  const sel = e.target as HTMLSelectElement;
+  const li = sel.closest<HTMLElement>('li.clip');
+  const c = state.clips.find((x) => x.id === li?.dataset.id);
+  if (sel.dataset.action !== 'seconds' || !c || c.kind !== 'photo' || state.exporting) return;
+  c.duration = c.end = Number(sel.value);
+  stopPreview();
+  invalidateResult();
+  render();
+});
+
 $('clips').addEventListener('click', (e) => {
   const btn = (e.target as HTMLElement).closest('button');
   const li = btn?.closest<HTMLElement>('li.clip');
@@ -141,7 +180,7 @@ $('clips').addEventListener('click', (e) => {
       if (i < clips.length - 1) [clips[i + 1], clips[i]] = [clips[i], clips[i + 1]];
       break;
     case 'trim':
-      openTrim(clips[i], i);
+      if (clips[i].kind === 'video') openTrim(clips[i] as VideoClip, i);
       return;
     case 'remove':
       stopPreview();
@@ -159,12 +198,12 @@ const dlg = $<HTMLDialogElement>('trimDialog');
 const tv = $<HTMLVideoElement>('trimVideo');
 const ts = $<HTMLInputElement>('trimStart');
 const te = $<HTMLInputElement>('trimEnd');
-let trimming: Clip | null = null;
+let trimming: VideoClip | null = null;
 
-function openTrim(clip: Clip, index: number) {
+function openTrim(clip: VideoClip, index: number) {
   stopPreview();
   trimming = clip;
-  $('trimHeading').textContent = `${index + 1}本目を切る`;
+  $('trimHeading').textContent = `${index + 1}．動画を切る`;
   tv.src = clip.objectUrl;
   const max = clip.duration.toFixed(1);
   ts.max = te.max = max;
@@ -483,8 +522,10 @@ const volume = (id: string) => Number($<HTMLInputElement>(id).value) / 100;
 
 const pv = $<HTMLVideoElement>('previewVideo');
 const pTitle = $('previewTitle');
+const pPhoto = $<HTMLImageElement>('previewPhoto');
 let previewIndex = -1;
-let previewElapsed = 0;
+let previewTimer = 0;
+let titleTimer = 0;
 let previewStartedAt = 0;
 
 $('previewBtn').addEventListener('click', () => {
@@ -492,14 +533,16 @@ $('previewBtn').addEventListener('click', () => {
   stopPreview();
   stopBgm();
   $('previewBox').hidden = false;
-  previewElapsed = 0;
   previewStartedAt = performance.now();
   const title = $<HTMLInputElement>('title').value.trim();
   pTitle.textContent = title;
   applyTitleFont();
   pTitle.classList.remove('show');
   // next frames, so the fade-in transition actually runs
-  if (title) requestAnimationFrame(() => requestAnimationFrame(() => pTitle.classList.add('show')));
+  if (title) {
+    requestAnimationFrame(() => requestAnimationFrame(() => pTitle.classList.add('show')));
+    titleTimer = window.setTimeout(() => pTitle.classList.remove('show'), (TITLE_SECONDS - TITLE_FADE) * 1000);
+  }
   syncPreviewVolume();
   playPreviewClip(0);
   const choice = bgmChoice();
@@ -531,6 +574,21 @@ function playPreviewClip(i: number) {
   }
   previewIndex = i;
   const c = state.clips[i];
+  clearTimeout(previewTimer);
+  if (c.kind === 'photo') {
+    pv.pause();
+    pv.hidden = true;
+    pPhoto.src = c.objectUrl;
+    pPhoto.hidden = false;
+    previewTimer = window.setTimeout(() => {
+      if (previewIndex !== i) return;
+      playPreviewClip(i + 1);
+    }, clipLength(c) * 1000);
+    return;
+  }
+  pPhoto.hidden = true;
+  pPhoto.removeAttribute('src');
+  pv.hidden = false;
   pv.src = c.objectUrl;
   pv.addEventListener(
     'loadedmetadata',
@@ -545,18 +603,15 @@ function playPreviewClip(i: number) {
 pv.addEventListener('timeupdate', () => {
   if (previewIndex < 0) return;
   const c = state.clips[previewIndex];
-  if (!c) return;
-  const t = previewElapsed + Math.max(0, pv.currentTime - c.start);
-  if (t >= TITLE_SECONDS - TITLE_FADE) pTitle.classList.remove('show');
+  if (!c || c.kind !== 'video') return;
   if (pv.currentTime >= c.end - 0.03) {
-    previewElapsed += clipLength(c);
     playPreviewClip(previewIndex + 1);
   }
 });
 pv.addEventListener('ended', () => {
   if (previewIndex < 0) return;
   const c = state.clips[previewIndex];
-  previewElapsed += c ? clipLength(c) : 0;
+  if (c?.kind === 'photo') return;
   playPreviewClip(previewIndex + 1);
 });
 
@@ -573,12 +628,17 @@ function syncPreviewVolume() {
 function stopPreview(hide = true) {
   const wasPlaying = previewIndex >= 0;
   previewIndex = -1;
+  clearTimeout(previewTimer);
+  clearTimeout(titleTimer);
   pv.pause();
   pTitle.classList.remove('show');
   if (wasPlaying) stopBgm();
   if (hide) {
     pv.removeAttribute('src');
     pv.load();
+    pv.hidden = false;
+    pPhoto.hidden = true;
+    pPhoto.removeAttribute('src');
     $('previewBox').hidden = true;
   }
 }
