@@ -419,3 +419,34 @@ progress {
   font-size: 12px;
   padding: 0 16px calc(24px + env(safe-area-inset-bottom));
 }
+
+.balance {
+  background: #fdf6ee;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px 4px;
+  margin: 12px 0;
+}
+.balance-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.vol {
+  display: grid;
+  grid-template-columns: 6.5em 1fr 3.2em;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  font-weight: 600;
+}
+.vol input[type="range"] {
+  min-height: 44px;
+}
+.vol-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.vol.off {
+  opacity: 0.4;
+}

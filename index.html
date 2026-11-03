@@ -66,6 +66,21 @@
           <p id="bgmHint" class="hint">音楽なし。元の動画の音だけになります。</p>
         </div>
 
+        <div class="balance" role="group" aria-label="音のバランス">
+          <div class="balance-title">音のバランス</div>
+          <label class="vol">
+            <span class="vol-name">🎥 動画の音</span>
+            <input id="videoVol" type="range" min="0" max="100" value="100" />
+            <span id="vvLabel" class="vol-val">100%</span>
+          </label>
+          <label class="vol" id="bgmVolRow">
+            <span class="vol-name">🎵 音楽</span>
+            <input id="bgmVol" type="range" min="0" max="100" value="40" />
+            <span id="bvLabel" class="vol-val">40%</span>
+          </label>
+          <p id="balanceHint" class="hint"></p>
+        </div>
+
         <label class="field">
           冒頭のタイトル（なくてもOK）
           <input id="title" type="text" maxlength="30" placeholder="例：秋の公園さんぽ" />
@@ -75,17 +90,6 @@
           <div id="fontChoices" class="chips two" role="radiogroup" aria-label="文字のデザイン"></div>
         </div>
 
-        <details class="extras">
-          <summary>音量の調整</summary>
-          <label class="field">
-            元の動画の音 <span id="vvLabel">100%</span>
-            <input id="videoVol" type="range" min="0" max="100" value="100" />
-          </label>
-          <label class="field">
-            音楽の音 <span id="bvLabel">40%</span>
-            <input id="bgmVol" type="range" min="0" max="100" value="40" />
-          </label>
-        </details>
 
         <button id="previewBtn" class="btn big">▶ つなげて見る</button>
         <div id="previewBox" class="preview" hidden>

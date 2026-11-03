@@ -367,6 +367,7 @@ chipsBox.addEventListener('change', () => {
   const m = bgmMode();
   $('bgmFileRow').hidden = m !== 'file';
   $('bgmHint').textContent = hintFor(m);
+  syncBalance();
   invalidateResult();
   if (m === 'file') {
     if (!state.bgmFile) bgmInput.click();
@@ -381,6 +382,7 @@ bgmInput.addEventListener('change', () => {
   if (!f) return;
   state.bgmFile = f;
   $('bgmName').textContent = f.name;
+  syncBalance();
   invalidateResult();
   void playSample();
 });
@@ -517,6 +519,17 @@ for (const [id, label] of [
   });
 }
 const volume = (id: string) => Number($<HTMLInputElement>(id).value) / 100;
+
+/** Music slider is only meaningful when some music is chosen. */
+function syncBalance() {
+  const hasMusic = !!bgmChoice();
+  $('bgmVolRow').classList.toggle('off', !hasMusic);
+  $<HTMLInputElement>('bgmVol').disabled = !hasMusic;
+  $('balanceHint').textContent = hasMusic
+    ? '会話を聞かせたいときは「動画の音」を大きく、雰囲気重視なら「音楽」を大きく。'
+    : '音楽を選ぶと、音楽の大きさも調整できます。';
+}
+syncBalance();
 
 // ---------- preview (plays the clips back to back) ----------
 
