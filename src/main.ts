@@ -2,6 +2,7 @@ import './style.css';
 import { UserFacingError, clipLength, disposeClip, formatTime, loadClip, type Clip } from './media';
 import {
   TITLE_SECONDS,
+  drawTitle,
   exportVlog,
   isCancelled,
   loadBgm,
@@ -10,6 +11,7 @@ import {
   type ExportResult,
   type Orientation,
 } from './exporter';
+import { DEFAULT_FONT, FONTS, fontFamily, fontWeight, ensureFont, loadFontCss, type FontId } from './fonts';
 import { PRESETS, loadTracks, renderPreset, type PresetId, type Track } from './music';
 
 // Limits are provisional: set conservatively for phone memory, to be revisited after real-device tests.
@@ -430,9 +432,39 @@ async function playSample() {
   } else label?.classList.remove('playing');
 }
 
-// ---------- title / volume ----------
+// ---------- title / font / volume ----------
 
 $('title').addEventListener('input', invalidateResult);
+const fontBox = $('fontChoices');
+for (const f of FONTS) {
+  const el = document.createElement('label');
+  const input = document.createElement('input');
+  input.type = 'radio';
+  input.name = 'font';
+  input.value = f.id;
+  input.checked = f.id === DEFAULT_FONT;
+  const span = document.createElement('span');
+  const sample = document.createElement('b');
+  sample.className = 'font-sample';
+  sample.textContent = f.label;
+  sample.style.fontFamily = fontFamily(f.id);
+  sample.style.fontWeight = String(fontWeight(f.id));
+  const small = document.createElement('small');
+  small.textContent = f.desc;
+  span.append(sample, small);
+  el.append(input, span);
+  fontBox.append(el);
+}
+const titleFont = (): FontId => (fontBox.querySelector<HTMLInputElement>('input:checked')?.value as FontId) ?? DEFAULT_FONT;
+function applyTitleFont() {
+  pTitle.style.fontFamily = fontFamily(titleFont());
+  pTitle.style.fontWeight = String(fontWeight(titleFont()));
+}
+setTimeout(() => void loadFontCss(), 300);
+fontBox.addEventListener('change', () => {
+  invalidateResult();
+  applyTitleFont();
+});
 for (const [id, label] of [
   ['videoVol', 'vvLabel'],
   ['bgmVol', 'bvLabel'],
@@ -463,6 +495,7 @@ $('previewBtn').addEventListener('click', () => {
   previewStartedAt = performance.now();
   const title = $<HTMLInputElement>('title').value.trim();
   pTitle.textContent = title;
+  applyTitleFont();
   pTitle.classList.toggle('show', !!title);
   syncPreviewVolume();
   playPreviewClip(0);
@@ -568,6 +601,7 @@ $('exportBtn').addEventListener('click', async () => {
       clips: [...state.clips],
       orientation: orientation(),
       title: $<HTMLInputElement>('title').value,
+      titleFont: titleFont(),
       bgm: bgmChoice(),
       videoVolume: volume('videoVol'),
       bgmVolume: volume('bgmVol'),
@@ -666,4 +700,4 @@ planFormat().catch((err) => {
 });
 
 // Exposed for automated tests only.
-(window as unknown as { __vlog: unknown }).__vlog = { state, renderPreset };
+(window as unknown as { __vlog: unknown }).__vlog = { state, renderPreset, drawTitle, ensureFont };

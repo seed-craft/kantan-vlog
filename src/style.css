@@ -335,14 +335,13 @@ input[type="range"] {
 body.portrait .preview .stage,
 body.portrait #result video {
   aspect-ratio: 9 / 16;
-  width: auto;
-  height: min(70vh, 560px);
+  width: min(100%, calc(min(70vh, 560px) * 9 / 16));
+  height: auto;
   margin: 0 auto;
   display: block;
 }
-body.portrait .title-overlay {
-  inset: auto 0 22% 0;
-  padding: 30% 6% 4%;
+.preview .stage {
+  container-type: inline-size;
 }
 .preview video {
   width: 100%;
@@ -352,20 +351,34 @@ body.portrait .title-overlay {
 }
 .title-overlay {
   position: absolute;
-  inset: auto 0 0 0;
-  padding: 18% 6% 6%;
+  left: 4%;
+  right: 4%;
+  bottom: 12%;
   text-align: center;
   color: #fffaf2;
-  font-weight: 700;
-  font-size: clamp(18px, 6vw, 34px);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
-  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55));
+  font-size: 5cqw;
+  line-height: 1.3;
+  -webkit-text-stroke: 0.14em rgba(40, 28, 18, 0.55);
+  paint-order: stroke fill;
+  text-shadow: 0 0.04em 0.35em rgba(0, 0, 0, 0.35);
   opacity: 0;
   transition: opacity 0.4s;
   pointer-events: none;
 }
 .title-overlay.show {
   opacity: 1;
+}
+body.portrait .title-overlay {
+  bottom: 28%;
+  font-size: 9cqw;
+}
+
+.chips.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+.chips .font-sample {
+  font-size: 19px;
+  line-height: 1.4;
 }
 
 progress {

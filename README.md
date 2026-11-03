@@ -6,7 +6,7 @@
 
 - 動画・音声は端末の中だけで処理し、どこにも送りません（ログイン・解析・広告なし）
 - 縦長（スマホ・SNS向け、標準）と横長（テレビ・YouTube向け）を選べます
-- 冒頭タイトル、BGM（内蔵8曲または自分の音楽ファイル）、音量調整
+- 冒頭タイトル（まるゴシック・ゴシック・明朝・英語向けの筆記体から選べる）、BGM（内蔵8曲または自分の音楽ファイル）、音量調整
 - ホーム画面に追加すると、アプリのように開けます
 
 ## 対応環境
@@ -32,5 +32,6 @@ npm run test:e2e   # build後に実行。Chromium（Playwright）で実際に書
 
 - 動画の読み込み・書き出し：[Mediabunny](https://github.com/Vanilagy/mediabunny)（MPL-2.0）＋ブラウザ標準のWebCodecs
 - AACを書き出せないブラウザでは `@mediabunny/aac-encoder`（WASM）を自動で読み込みます
+- タイトルのフォント：Zen Maru Gothic・Noto Sans JP・Shippori Mincho・Pacifico（いずれもSIL OFL、Fontsourceで同梱）
 - 内蔵曲の追加方法は `public/bgm/README.md`
 - `main` に push すると GitHub Actions がビルドして GitHub Pages に公開します

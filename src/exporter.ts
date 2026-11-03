@@ -16,6 +16,7 @@ import {
 } from 'mediabunny';
 import { UserFacingError, type Clip } from './media';
 import { renderPreset, type PresetId } from './music';
+import { canvasFont, ensureFont, type FontId } from './fonts';
 
 export type Orientation = 'portrait' | 'landscape';
 export const FPS = 30;
@@ -36,6 +37,7 @@ export type ExportOptions = {
   clips: Clip[];
   orientation: Orientation;
   title: string;
+  titleFont: FontId;
   bgm: BgmChoice;
   /** 0..1 */
   videoVolume: number;
@@ -130,6 +132,7 @@ export async function exportVlog(opts: ExportOptions): Promise<ExportResult> {
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new UserFacingError('画面の描画機能が使えませんでした。');
   const backdrop = new Backdrop(W, H);
+  if (opts.title.trim()) await ensureFont(opts.titleFont, opts.title.trim());
 
   const format = plan.makeFormat();
   const output = new Output({ format, target: new BufferTarget() });
@@ -179,7 +182,7 @@ export async function exportVlog(opts: ExportOptions): Promise<ExportResult> {
             ctx.drawImage(wrapped.canvas, (W - fw) / 2, (H - fh) / 2, fw, fh);
           }
         } // else: keep the previous frame on screen
-        if (opts.title.trim() && t < TITLE_SECONDS) drawTitle(ctx, opts.title.trim(), t);
+        if (opts.title.trim() && t < TITLE_SECONDS) drawTitle(ctx, opts.title.trim(), t, opts.titleFont);
         await feedAudioUntil(t + 1);
         await videoSource.add(t, 1 / FPS);
         frameIndex++;
@@ -352,8 +355,6 @@ export function scheduleBgm(ctx: BaseAudioContext, music: AudioBuffer, volume: n
   return { node, gain };
 }
 
-const TITLE_FONT = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif';
-
 /** Splits a title into at most two balanced lines. */
 function titleLines(ctx: CanvasRenderingContext2D, title: string, maxW: number): string[] {
   if (ctx.measureText(title).width <= maxW) return [title];
@@ -363,8 +364,11 @@ function titleLines(ctx: CanvasRenderingContext2D, title: string, maxW: number):
   return [chars.slice(0, cut).join('').trim(), chars.slice(cut).join('').trim()];
 }
 
-/** Title over the opening seconds: fades in, holds, fades out. */
-export function drawTitle(ctx: CanvasRenderingContext2D, title: string, t: number) {
+/**
+ * Title over the opening seconds: fades in, holds, fades out.
+ * No background band: a soft dark outline and shadow keep it readable on any picture.
+ */
+export function drawTitle(ctx: CanvasRenderingContext2D, title: string, t: number, font: FontId) {
   const a = Math.min(1, t / 0.4, (TITLE_SECONDS - t) / 0.6);
   if (a <= 0) return;
   const W = ctx.canvas.width;
@@ -375,28 +379,31 @@ export function drawTitle(ctx: CanvasRenderingContext2D, title: string, t: numbe
   const maxW = W * 0.86;
   ctx.save();
   ctx.globalAlpha = a;
-  const top = baseY - H * 0.25;
-  const grad = ctx.createLinearGradient(0, top, 0, Math.min(H, baseY + H * 0.12));
-  grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(0.75, 'rgba(0,0,0,0.5)');
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, top, W, H * 0.37);
 
   let size = Math.round(Math.min(W, H) * 0.09);
-  ctx.font = `700 ${size}px ${TITLE_FONT}`;
+  ctx.font = canvasFont(font, size);
   let lines = titleLines(ctx, title, maxW);
   while (lines.some((l) => ctx.measureText(l).width > maxW) && size > 22) {
     size -= 2;
-    ctx.font = `700 ${size}px ${TITLE_FONT}`;
+    ctx.font = canvasFont(font, size);
     lines = titleLines(ctx, title, maxW);
   }
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.shadowColor = 'rgba(0,0,0,0.6)';
-  ctx.shadowBlur = size * 0.25;
+  ctx.lineJoin = 'round';
+  const lh = size * 1.3;
+  const ys = lines.map((_, k) => baseY - (lines.length - 1 - k) * lh);
+
+  // 1) soft shadow + outline
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = size * 0.35;
+  ctx.shadowOffsetY = size * 0.04;
+  ctx.lineWidth = size * 0.14;
+  ctx.strokeStyle = 'rgba(40,28,18,0.55)';
+  lines.forEach((l, k) => ctx.strokeText(l, W / 2, ys[k]));
+  // 2) text
+  ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#fffaf2';
-  const lh = size * 1.25;
-  lines.forEach((l, k) => ctx.fillText(l, W / 2, baseY - (lines.length - 1 - k) * lh));
+  lines.forEach((l, k) => ctx.fillText(l, W / 2, ys[k]));
   ctx.restore();
 }
