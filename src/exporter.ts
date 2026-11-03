@@ -20,7 +20,7 @@ import { canvasFont, ensureFont, type FontId } from './fonts';
 
 export type Orientation = 'portrait' | 'landscape';
 export const FPS = 30;
-export const TITLE_SECONDS = 2;
+export const TITLE_SECONDS = 3;
 export const TITLE_FADE = 0.5;
 const SAMPLE_RATE = 48000;
 const VIDEO_BITRATE = 4_000_000;
