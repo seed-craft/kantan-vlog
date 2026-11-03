@@ -694,6 +694,9 @@ window.addEventListener('beforeunload', (e) => {
   if (state.exporting) e.preventDefault();
 });
 
+declare const __BUILD__: string;
+$('ver').textContent = __BUILD__;
+
 // ---------- support check on load ----------
 
 planFormat().catch((err) => {
