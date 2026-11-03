@@ -1,0 +1,15 @@
+{
+  "name": "かんたんVlog",
+  "short_name": "かんたんVlog",
+  "description": "スマホの動画をつないで、1本の思い出動画に。動画は端末の外に送られません。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbf7f1",
+  "theme_color": "#fbf7f1",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

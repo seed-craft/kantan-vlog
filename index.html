@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fbf7f1" />
+    <meta name="description" content="スマホの動画をつないで、1本の思い出動画に。動画は端末の外に送られません。" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="かんたんVlog" />
+    <title>かんたんVlog</title>
+  </head>
+  <body>
+    <header class="top">
+      <h1>かんたんVlog</h1>
+      <p>スマホの動画をつないで、1本の思い出動画に。動画は端末の外に送られません。</p>
+    </header>
+
+    <main>
+      <div id="support" class="notice warn" hidden></div>
+
+      <section class="step">
+        <h2><span class="num">1</span>動画を選ぶ</h2>
+        <label class="btn primary big">
+          ＋ 動画を選ぶ
+          <input id="pick" type="file" accept="video/*" multiple hidden />
+        </label>
+        <p class="hint">短い動画を数本（まずは5本くらいまで）。あとから追加もできます。</p>
+        <div id="loading" class="hint" hidden></div>
+        <ul id="errors" class="errors"></ul>
+      </section>
+
+      <section class="step" id="arrange" hidden>
+        <h2><span class="num">2</span>並べる・切る</h2>
+        <div class="seg" role="radiogroup" aria-label="できあがりの形">
+          <label><input type="radio" name="orient" value="portrait" checked /><span>縦長<small>スマホ・SNS</small></span></label>
+          <label><input type="radio" name="orient" value="landscape" /><span>横長<small>テレビ・YouTube</small></span></label>
+        </div>
+        <ol id="clips" class="clips"></ol>
+        <p id="total" class="total"></p>
+
+        <div class="field">
+          音楽（BGM）
+          <div id="bgmChoices" class="chips" role="radiogroup" aria-label="音楽"></div>
+          <div id="bgmFileRow" class="row" hidden>
+            <label class="btn small">
+              ファイルを選ぶ
+              <input id="bgm" type="file" accept="audio/*,.mp3,.m4a,.aac,.wav" hidden />
+            </label>
+            <span id="bgmName" class="muted">まだ選んでいません</span>
+          </div>
+          <p id="bgmHint" class="hint">音楽なし。元の動画の音だけになります。</p>
+        </div>
+
+        <label class="field">
+          冒頭のタイトル（なくてもOK）
+          <input id="title" type="text" maxlength="30" placeholder="例：秋の公園さんぽ" />
+        </label>
+
+        <details class="extras">
+          <summary>音量の調整</summary>
+          <label class="field">
+            元の動画の音 <span id="vvLabel">100%</span>
+            <input id="videoVol" type="range" min="0" max="100" value="100" />
+          </label>
+          <label class="field">
+            音楽の音 <span id="bvLabel">40%</span>
+            <input id="bgmVol" type="range" min="0" max="100" value="40" />
+          </label>
+        </details>
+
+        <button id="previewBtn" class="btn big">▶ つなげて見る</button>
+        <div id="previewBox" class="preview" hidden>
+          <div class="stage">
+            <video id="previewVideo" playsinline></video>
+            <div id="previewTitle" class="title-overlay"></div>
+          </div>
+          <p class="hint">プレビューは目安です。音楽の音量はスマホによって反映されないことがあります。</p>
+          <button id="previewStop" class="btn">プレビューを止める</button>
+        </div>
+      </section>
+
+      <section class="step" id="save" hidden>
+        <h2><span class="num">3</span>保存する</h2>
+        <button id="exportBtn" class="btn primary big">動画を作って保存する</button>
+        <p id="limitMsg" class="hint warn-text" hidden></p>
+        <div id="progressBox" hidden>
+          <p id="progressLabel">準備しています</p>
+          <progress id="progress" max="1" value="0"></progress>
+          <p class="hint">作り終わるまで、この画面を閉じたり、ほかのアプリに切り替えたりしないでください。</p>
+          <button id="cancelBtn" class="btn">やめる</button>
+        </div>
+        <div id="result" hidden>
+          <video id="resultVideo" controls playsinline></video>
+          <div class="row wrap">
+            <button id="shareBtn" class="btn primary big" hidden>写真に保存・共有する</button>
+            <a id="downloadLink" class="btn big">ファイルとして保存</a>
+          </div>
+          <p id="resultInfo" class="hint"></p>
+        </div>
+      </section>
+    </main>
+
+    <dialog id="trimDialog" class="sheet">
+      <h3 id="trimHeading">切る</h3>
+      <video id="trimVideo" playsinline muted></video>
+      <div class="row">
+        <button id="trimPlay" class="btn">▶ 再生</button>
+        <span id="trimNow" class="muted"></span>
+      </div>
+      <label class="field">
+        はじまり <span id="trimStartLabel"></span>
+        <input id="trimStart" type="range" min="0" step="0.1" />
+      </label>
+      <label class="field">
+        おわり <span id="trimEndLabel"></span>
+        <input id="trimEnd" type="range" min="0" step="0.1" />
+      </label>
+      <div class="row wrap">
+        <button id="setStart" class="btn small">今の場面をはじまりに</button>
+        <button id="setEnd" class="btn small">今の場面をおわりに</button>
+      </div>
+      <p id="trimLen" class="total"></p>
+      <div class="row">
+        <button id="trimCancel" class="btn">もどす</button>
+        <button id="trimOk" class="btn primary">決定</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+[
+  { "id": "honobono", "label": "ほのぼの", "desc": "家族のおでかけに", "file": "honobono.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "wakuwaku", "label": "わくわく", "desc": "旅行・イベントに", "file": "wakuwaku.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "genki", "label": "元気", "desc": "スポーツ・遊びに", "file": "genki.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "sawayaka", "label": "さわやか", "desc": "朝・おさんぽに", "file": "sawayaka.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "cafe", "label": "カフェ", "desc": "のんびり日常に", "file": "cafe.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "kirakira", "label": "キラキラ", "desc": "お祝い・行事に", "file": "kirakira.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "shittori", "label": "しっとり", "desc": "成長記録・思い出に", "file": "shittori.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" },
+  { "id": "ouchi", "label": "おうち", "desc": "雨の日・夜に", "file": "ouchi.m4a", "credit": "Google Gemini（Lyria 3）で生成した曲です（AI生成）。家族や友だちに送る動画にも使えます。" }
+]
