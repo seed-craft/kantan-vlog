@@ -45,6 +45,8 @@ for f in spec["frames"]:
     out = {"t": f["t"]}
     for name, (x0, y0, x1, y1) in f.get("regions", {}).items():
         out[name] = round(float(img[y0:y1, x0:x1].mean()), 1)
+    if "save" in f:
+        np.save(f["save"], img.astype(np.uint8))
     if "title_band" in f:
         x0, y0, x1, y1 = f["title_band"]
         out["title_px"] = int(((img[y0:y1, x0:x1] > 235).all(axis=2)).sum())

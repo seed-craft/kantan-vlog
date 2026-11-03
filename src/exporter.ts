@@ -20,7 +20,8 @@ import { canvasFont, ensureFont, type FontId } from './fonts';
 
 export type Orientation = 'portrait' | 'landscape';
 export const FPS = 30;
-export const TITLE_SECONDS = 3;
+export const TITLE_SECONDS = 2;
+export const TITLE_FADE = 0.5;
 const SAMPLE_RATE = 48000;
 const VIDEO_BITRATE = 4_000_000;
 const AUDIO_BITRATE = 128_000;
@@ -366,16 +367,13 @@ function titleLines(ctx: CanvasRenderingContext2D, title: string, maxW: number):
 
 /**
  * Title over the opening seconds: fades in, holds, fades out.
- * No background band: a soft dark outline and shadow keep it readable on any picture.
+ * Plain text (no band, outline or shadow), centered in the frame.
  */
 export function drawTitle(ctx: CanvasRenderingContext2D, title: string, t: number, font: FontId) {
-  const a = Math.min(1, t / 0.4, (TITLE_SECONDS - t) / 0.6);
+  const a = Math.min(1, t / TITLE_FADE, (TITLE_SECONDS - t) / TITLE_FADE);
   if (a <= 0) return;
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
-  const portrait = H > W;
-  // In portrait, stay above the area that SNS apps cover with their own buttons and captions.
-  const baseY = portrait ? H * 0.7 : H * 0.86;
   const maxW = W * 0.86;
   ctx.save();
   ctx.globalAlpha = a;
@@ -389,20 +387,10 @@ export function drawTitle(ctx: CanvasRenderingContext2D, title: string, t: numbe
     lines = titleLines(ctx, title, maxW);
   }
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.lineJoin = 'round';
+  ctx.textBaseline = 'middle';
   const lh = size * 1.3;
-  const ys = lines.map((_, k) => baseY - (lines.length - 1 - k) * lh);
+  const ys = lines.map((_, k) => H / 2 + (k - (lines.length - 1) / 2) * lh);
 
-  // 1) soft shadow + outline
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = size * 0.35;
-  ctx.shadowOffsetY = size * 0.04;
-  ctx.lineWidth = size * 0.14;
-  ctx.strokeStyle = 'rgba(40,28,18,0.55)';
-  lines.forEach((l, k) => ctx.strokeText(l, W / 2, ys[k]));
-  // 2) text
-  ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#fffaf2';
   lines.forEach((l, k) => ctx.fillText(l, W / 2, ys[k]));
   ctx.restore();

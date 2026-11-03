@@ -124,7 +124,7 @@ try {
   const f1 = await exportAndDownload(page, 'out-1.mp4');
   console.log(`      export took ${((Date.now() - t0) / 1000).toFixed(1)}s; info: ${await page.locator('#resultInfo').innerText()}`);
   await page.screenshot({ path: path.join(outDir, 'screen-result.png'), fullPage: true });
-  const titleBand = [60, 790, 660, 920];
+  const titleBand = [60, 570, 660, 710]; // vertical center of 720x1280
   const a1 = analyze(f1, {
     segments: [
       [0.5, 3.5, 880],
@@ -132,7 +132,7 @@ try {
       [6.3, 8.7, 0],
     ],
     frames: [
-      { t: 1.0, regions: { top: [100, 40, 620, 200] }, title_band: titleBand },
+      { t: 1.0, regions: { top: [100, 40, 620, 200] }, title_band: titleBand, save: path.join(outDir, 'f1-title.npy') },
       { t: 4.8, regions: { top: [100, 40, 620, 300], center: [200, 500, 520, 780] } },
     ],
   });
@@ -152,9 +152,12 @@ try {
   await page.$eval('#videoVol', (el) => { el.value = '0'; el.dispatchEvent(new Event('input')); });
   await page.$eval('#bgmVol', (el) => { el.value = '80'; el.dispatchEvent(new Event('input')); });
   const f2 = await exportAndDownload(page, 'out-2.mp4');
-  const a2 = analyze(f2, { segments: [[1, 3.5, 330], [4.3, 5.7, 330], [6.3, 7.5, 330]], frames: [{ t: 1.0, title_band: titleBand }] });
+  const a2 = analyze(f2, { segments: [[1, 3.5, 330], [4.3, 5.7, 330], [6.3, 7.5, 330]], frames: [{ t: 1.0, title_band: titleBand, save: path.join(outDir, 'f2-notitle.npy') }] });
   console.log('      ', JSON.stringify(a2));
-  ok(a1.frames[0].title_px > a2.frames[0].title_px + 400, `title drawn (${a1.frames[0].title_px} vs ${a2.frames[0].title_px} bright px without title)`);
+  const titleDiff = Number(
+    execFileSync('python3', ['-c', `import numpy as n;a=n.load('${path.join(outDir, 'f1-title.npy')}').astype(int);b=n.load('${path.join(outDir, 'f2-notitle.npy')}').astype(int);d=n.abs(a-b).sum(axis=2)>60;print(d[560:720,40:680].sum(), d[:400].sum())`], { encoding: 'utf8' }).split(' ')[0],
+  );
+  ok(titleDiff > 1500, `title drawn at the vertical center (${titleDiff} changed px in the center band)`);
   ok(a2.segments.every((s) => s.pass), 'own music file (330Hz) across the video, original sound muted');
 
   // export #3: landscape, built-in music, original sound back on

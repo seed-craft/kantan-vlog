@@ -1,6 +1,7 @@
 import './style.css';
 import { UserFacingError, clipLength, disposeClip, formatTime, loadClip, type Clip } from './media';
 import {
+  TITLE_FADE,
   TITLE_SECONDS,
   drawTitle,
   exportVlog,
@@ -496,7 +497,9 @@ $('previewBtn').addEventListener('click', () => {
   const title = $<HTMLInputElement>('title').value.trim();
   pTitle.textContent = title;
   applyTitleFont();
-  pTitle.classList.toggle('show', !!title);
+  pTitle.classList.remove('show');
+  // next frames, so the fade-in transition actually runs
+  if (title) requestAnimationFrame(() => requestAnimationFrame(() => pTitle.classList.add('show')));
   syncPreviewVolume();
   playPreviewClip(0);
   const choice = bgmChoice();
@@ -544,7 +547,7 @@ pv.addEventListener('timeupdate', () => {
   const c = state.clips[previewIndex];
   if (!c) return;
   const t = previewElapsed + Math.max(0, pv.currentTime - c.start);
-  if (t >= TITLE_SECONDS) pTitle.classList.remove('show');
+  if (t >= TITLE_SECONDS - TITLE_FADE) pTitle.classList.remove('show');
   if (pv.currentTime >= c.end - 0.03) {
     previewElapsed += clipLength(c);
     playPreviewClip(previewIndex + 1);
